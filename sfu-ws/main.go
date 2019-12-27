@@ -34,12 +34,25 @@ func init() {
 
 }
 
+type Flags struct {
+	ListenAddr string
+	CertPath   string
+	KeyPath    string
+}
+
 func main() {
 	if err := prometheus.Register(prommod.NewCollector("sfu_ws")); err != nil {
 		panic(err)
 	}
 
-	port := flag.String("p", "8443", "https port")
+	param := Flags{
+		ListenAddr: ":443",
+		CertPath:   "cert.pem",
+		KeyPath:    "key.pem",
+	}
+	flag.StringVar(&param.ListenAddr, "l", param.ListenAddr, "https ip:port")
+	flag.StringVar(&param.CertPath, "cert", param.CertPath, "cert file path")
+	flag.StringVar(&param.KeyPath, "key", param.KeyPath, "key file path")
 	flag.Parse()
 
 	http.Handle("/metrics", promhttp.Handler())
@@ -51,6 +64,11 @@ func main() {
 	http.HandleFunc("/", web)
 
 	// Support https, so we can test by lan
-	fmt.Println("Web listening :" + *port)
-	panic(http.ListenAndServeTLS(":"+*port, "cert.pem", "key.pem", nil))
+	fmt.Println("Web listening " + param.ListenAddr)
+	panic(http.ListenAndServeTLS(
+		param.ListenAddr,
+		param.CertPath,
+		param.KeyPath,
+		nil,
+	))
 }
