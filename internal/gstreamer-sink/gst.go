@@ -32,6 +32,8 @@ func CreatePipeline(codecName string) *Pipeline {
 	switch codecName {
 	case webrtc.VP8:
 		pipelineStr += ", encoding-name=VP8-DRAFT-IETF-01 ! rtpvp8depay ! decodebin ! autovideosink"
+	case webrtc.PCMU:
+		pipelineStr += ", clock-rate=8000, encoding-name=PCMU ! rtppcmudepay ! decodebin ! autoaudiosink"
 	case webrtc.Opus:
 		pipelineStr += ", payload=96, encoding-name=OPUS ! rtpopusdepay ! decodebin ! autoaudiosink"
 	case webrtc.VP9:
