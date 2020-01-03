@@ -28,6 +28,9 @@
 </div>
 
 <div id="logs"></div>
+
+<script src="https://webrtc.github.io/adapter/adapter-latest.js"></script>
+
 <script>
 var log = msg => {
     document.getElementById('logs').innerHTML += msg + '<br>'
@@ -39,20 +42,20 @@ var dataChannel = null;
 window.onload = function() {
     sock = new WebSocket(wsuri);
     sock.onopen = function() {
-        <!-- console.log("websocket connected to " + wsuri); -->
+        console.log("websocket connected to " + wsuri)
     }
     sock.onclose = function(e) {
         <!-- sock = new WebSocket('wss://' + location.host + '/ws'); -->
-        <!-- console.log("websocket connection closed (" + e.code + ")"); -->
+        console.log("websocket connection closed (" + e.code + ")")
     }
     sock.onmessage = function(e) {
-        <!-- console.log("websocket message received: " + e.data); -->
+        console.log("websocket message received: " + e.data)
         document.getElementById('remoteSDP').value = e.data
-        <!-- console.log("startSession"); -->
+        console.log("startSession")
         window.startSession()
     }
     sock.onerror = function(e) {
-        <!-- console.log("websocket error: " + e.data); -->
+        console.log("websocket error: " + e.data)
     }
 };
 
@@ -73,20 +76,23 @@ window.sendMessage = element => {
 window.createSession = isPublisher => {
     let pc = new RTCPeerConnection({
         iceServers: [
-        {
-            urls: 'stun:stun.l.google.com:19302'
-        }
+            {
+                //urls: 'stun:stun.l.google.com:19302'
+                urls: "stun:test.tiga.wang:3478",
+                username: "com",
+                credential: "webrtcdemo"
+            }
         ]
     })
     pc.oniceconnectionstatechange = e => log(pc.iceConnectionState)
-        pc.onicecandidate = event => {
-            if (event.candidate === null) {
-                document.getElementById('localSDP').value = pc.localDescription.sdp;
-                <!-- document.getElementById('localSDP').value = pc.localDescription.sdp; -->
-                sock.send(pc.localDescription.sdp);
-                <!-- console.log("send sdp to server:==============\n" + pc.localDescription.sdp); -->
-            }
+    pc.onicecandidate = event => {
+        if (event.candidate === null) {
+            document.getElementById('localSDP').value = pc.localDescription.sdp;
+            <!-- document.getElementById('localSDP').value = pc.localDescription.sdp; -->
+            sock.send(pc.localDescription.sdp);
+            console.log("send sdp to server:==============\n" + pc.localDescription.sdp); 
         }
+    }
 
     if (isPublisher) {
         navigator.mediaDevices.getUserMedia({ video: true, audio: true})
@@ -95,28 +101,31 @@ window.createSession = isPublisher => {
                 pc.createOffer()
                   .then(d => pc.setLocalDescription(d))
                   .catch(log)
-                dataChannel = pc.createDataChannel('data')
+                //dataChannel = pc.createDataChannel('data')
             }).catch(log)
-            <!-- console.log("Publisher createOffer") -->
+            console.log("Publisher createOffer")
     } else {
-        <!-- console.log("Subcriber createOffer") -->
+        console.log("Subcriber createOffer")
         document.getElementById('msginput').style = 'display: none'
-        dataChannel = pc.createDataChannel('data')
-        dataChannel.onmessage = e => log(`receive data from '${dataChannel.label}' payload '${e.data}'`)
+        //dataChannel = pc.createDataChannel('data')
+        //dataChannel.onmessage = e => log(`receive data from '${dataChannel.label}' payload '${e.data}'`)
         pc.addTransceiver('audio', {'direction': 'recvonly'})
         pc.addTransceiver('video', {'direction': 'recvonly'})
+
+        //pc.addTransceiver('audio', {'direction': 'sendrecv'})
+        //pc.addTransceiver('video', {'direction': 'sendrecv'})
 
         pc.createOffer()
             .then(d => pc.setLocalDescription(d))
             .catch(log)
 
-            <!-- console.log("Subcriber ontrack") -->
-            pc.ontrack = function (event) {
-                var el = document.getElementById('video1')
-                el.srcObject = event.streams[0]
-                el.autoplay = true
-                el.controls = true
-            }
+        console.log("Subcriber ontrack")
+        pc.ontrack = function (event) {
+            var el = document.getElementById('video1')
+            el.srcObject = event.streams[0]
+            el.autoplay = true
+            el.controls = true
+        }
     }
 
     window.startSession = () => {
@@ -133,9 +142,9 @@ window.createSession = isPublisher => {
     }
 
     let btns = document.getElementsByClassName('sessbtn')
-        for (let i = 0; i < btns.length; i++) {
-            btns[i].style = 'display: none'
-        }
+    for (let i = 0; i < btns.length; i++) {
+        btns[i].style = 'display: none'
+    }
 
     document.getElementById('signalingContainer').style = 'display: block'
 }

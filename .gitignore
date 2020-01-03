@@ -1,2 +1,8 @@
 sfu-ws/cert.pem
 sfu-ws/key.pem
+sfu-ws/sfu-ws
+sfu-ws/vendor
+*.swp
+*.exe
+*.crt
+*.key
