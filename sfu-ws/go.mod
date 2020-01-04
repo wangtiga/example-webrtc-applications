@@ -1,4 +1,4 @@
-module github.com/pion/example-webrtc-applications/sfu-ws
+module sfu-ws
 
 go 1.13
 

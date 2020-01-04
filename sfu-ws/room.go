@@ -18,7 +18,7 @@ var peerConnectionConfig = webrtc.Configuration{
 	ICEServers: []webrtc.ICEServer{
 		{
 			//URLs: []string{"stun:stun.l.google.com:19302"},
-			URLs:           []string{"stun:test.tiga.wang:3478"},
+			URLs:           []string{"stun:turn.tiga.wang:3478"},
 			Username:       "com",
 			Credential:     "webrtcdemo",
 			CredentialType: webrtc.ICECredentialTypePassword,
