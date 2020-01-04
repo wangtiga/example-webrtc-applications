@@ -11,9 +11,14 @@ import (
 	"github.com/pion/example-webrtc-applications/internal/signal"
 )
 
+const (
+	_asrc = "uridecodebin uri=https://www.freedesktop.org/software/gstreamer-sdk/data/media/sintel_trailer-480p.mkv ! queue ! audioconvert"
+	_vsrc = "uridecodebin uri=https://www.freedesktop.org/software/gstreamer-sdk/data/media/sintel_trailer-480p.mkv ! videoscale ! video/x-raw, width=320, height=240 ! queue "
+)
+
 func main() {
-	audioSrc := flag.String("audio-src", "audiotestsrc", "GStreamer audio src")
-	videoSrc := flag.String("video-src", "videotestsrc", "GStreamer video src")
+	audioSrc := flag.String("audio-src", _asrc, "GStreamer audio src")
+	videoSrc := flag.String("video-src", _vsrc, "GStreamer video src")
 	flag.Parse()
 
 	// Everything below is the pion-WebRTC API! Thanks for using it ❤️.
