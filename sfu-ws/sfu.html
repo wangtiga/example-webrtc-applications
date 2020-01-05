@@ -18,21 +18,23 @@
 
 <div>
 
-	<ul>
-		<li>
-			<video id="video1" width="320" height="240" autoplay muted controls></video> <br />
+	<ul id="videoAreaList">
+		<li id="memberSelf">
+			<video class="videoShow" width="320" height="240" autoplay muted controls></video> <br />
 
-			<button class="sessbtn" onclick="window.createSession(true)">Publish</button>
-			<button class="sessbtn" onclick="window.createSession(false)">Subscribe</button>
+			<button class="sessbtn" onclick="window.createSession(this, true)">Publish</button>
+			<button class="sessbtn" onclick="window.createSession(this, false)">Subscribe</button>
 
-			<div id="signalingContainer" style="display: none">
-			    Client SDP<textarea class="comments" id="localSDP" readonly="true" rows=10   cols=30   onpropertychange= "this.style.posHeight=this.scrollHeight "></textarea>
-			    Server SDP<textarea class="comments" id="remoteSDP" readonly="true" rows=10   cols=30   onpropertychange= "this.style.posHeight=this.scrollHeight "></textarea>
+			<div class="signalingContainer" style="display: none">
+			    Client SDP<textarea class="comments localSDP"  readonly="true" rows=10   cols=30   onpropertychange= "this.style.posHeight=this.scrollHeight "></textarea>
+			    Server SDP<textarea class="comments remoteSDP" readonly="true" rows=10   cols=30   onpropertychange= "this.style.posHeight=this.scrollHeight "></textarea>
 			</div>
 		<li>
 	</ul>
 
+	<button onclick="window.test1()">test</button>
 </div>
+
 <div id="logs"></div>
 
 
@@ -43,16 +45,16 @@ var log = msg => {
     document.getElementById("logs").innerHTML += msg + "<br>"
 }
 
-var uiSignalingContainer = document.getElementById("signalingContainer");
-var uiRemoteSDP = document.getElementById("remoteSDP");
-var uiLocalSDP  = document.getElementById("localSDP");
-var uiVideo     = document.getElementById("video1");
-
 var sock = null;
 var wsuri = "wss://" + location.host + "/ws";
+var msMap = new Map();
+//var msPublish = new MediaChannel();
+// TODO 1.destroy peerConnection.close();
+// TODO 2.js map
+// TODO 3.sfu request format
+// TODO 3.windows load
 
 window.onload = function() {
-    sock = new WebSocket(wsuri);
     sock.onopen = function() {
         console.log("websocket connected to " + wsuri);
     }
@@ -60,17 +62,63 @@ window.onload = function() {
         console.log("websocket connection closed (" + e.code + ")");
     }
     sock.onmessage = function(e) {
-	let sdp = e.data;
-        console.log("websocket message received: " + sdp);
-        uiRemoteSDP.value = sdp;
-        window.startSession(sdp);
+	let sdp = e.data.sdp;
+	let uiID = e.data.memberId;
+        //console.log("websocket message received: " + sdp);
+        let msMedia = msMap.get(uiID);
+	msMedia.SetRemoteSdp(sdp);
     }
     sock.onerror = function(e) {
         console.log("websocket error: " + e.data)
     }
 };
 
-window.createSession = isPublisher => {
+window.test1 = arg => {
+    let member1 = document.getElementById("memberSelf");
+    let cln = member1.cloneNode(true);
+    cln.setAttribute("id", "memberTest");
+
+    let videoAreaList = document.getElementById("videoAreaList");
+    videoAreaList.appendChild(cln);
+}
+
+window.createSession = (uiSelf, isPublisher) => {
+    let uiMember = uiSelf.parentElement;
+    let uiID = uiMember.getAttribute("id");
+    let msPublish  = msMap.get(uuID);
+
+    if (msPublish === undefined) {
+        msPublish = new MediaChannel(uiMember, uiID);
+	msMap.set(uiID, msPublish);
+    }
+
+    sock = new WebSocket(wsuri);
+    let uiShow = msPublish.GetElementVideoShow();
+    msPublish.CreateSession(isPublisher, uiShow);
+}
+
+function MediaChannel(uiMemberItem, memberId) {
+    this._uiSignalingContainer = uiMemberItem.getElementsByClassName("signalingContainer")[0];
+    this._uiRemoteSDP = uiMemberItem.getElementsByClassName("remoteSDP")[0];
+    this._uiLocalSDP  = uiMemberItem.getElementsByClassName("localSDP")[0];
+    this._uiShow      = uiMemberItem.getElementsByClassName("videoShow")[0];
+    //console.log(this._uiLocalSDP);
+    this._memberId = memberId;
+}
+
+MediaChannel.prototype.GetElementVideoShow = function () {
+    return this._uiShow;
+}
+
+MediaChannel.prototype.ShowDebugSDP = function (isPublisher, uiVideo) {
+    this._uiSignalingContainer.style = "display: block";
+    let btns = this._uiSignalingContainer.getElementsByClassName("sessbtn");
+    for (let i = 0; i < btns.length; i++) {
+        btns[i].style = "display: none";
+    }
+}
+
+MediaChannel.prototype.CreateSession = function (isPublisher, uiVideo) {
     let pc = new RTCPeerConnection({
         iceServers: [
             {
@@ -87,9 +135,11 @@ window.createSession = isPublisher => {
         if (event.candidate !== null) {
             return;
         }
-        uiLocalSDP.value = pc.localDescription.sdp;
-        sock.send(pc.localDescription.sdp);
-        console.log("send sdp to server:==============\n" + pc.localDescription.sdp); 
+        this._uiLocalSDP.value = pc.localDescription.sdp;
+	let sdp = pc.localDescription.sdp;
+	let msg = {"memberId": _memberId , "sdp":sdp};
+        sock.send(msg);
+        //console.log("send sdp to server:==============\n" + msg); 
     }
 
     if (isPublisher) {
@@ -106,42 +156,38 @@ window.createSession = isPublisher => {
         pc.addTransceiver("audio", {"direction": "recvonly"});
         pc.addTransceiver("video", {"direction": "recvonly"});
 
-        //pc.addTransceiver("audio", {"direction": "sendrecv"})
-        //pc.addTransceiver("video", {"direction": "sendrecv"})
-
         pc.createOffer()
             .then(d => pc.setLocalDescription(d))
             .catch(log);
 
         console.log("Subcriber ontrack");
         pc.ontrack = function (event) {
-            var el = uiVideo;
-            el.srcObject = event.streams[0];
-            el.autoplay = true;
-            el.controls = true;
+            uiVideo.srcObject = event.streams[0];
+            uiVideo.autoplay = true;
+            uiVideo.controls = true;
         }
     }
 
-    window.startSession = (sdp) => {
-        if (sdp === "") {
-            return alert("Session Description must not be empty");
-        }
-        console.log("startSession");
 
-        try {
-            pc.setRemoteDescription(new RTCSessionDescription({type:"answer", sdp:sdp}));
-        } catch (e) {
-            alert(e);
-        }
-    }
-
-    let btns = document.getElementsByClassName("sessbtn");
-    for (let i = 0; i < btns.length; i++) {
-        btns[i].style = "display: none";
-    }
-    uiSignalingContainer.style = "display: block";
-
+    this.ShowDebugSDP();
+    this._pc = pc;
 }
+
+MediaChannel.prototype.SetRemoteSdp = function (sdp) {
+    if (sdp === "") {
+        console.log("Session Description must not be empty");
+        return; 
+    }
+    console.log("startSession sdp");
+
+    try {
+        this._pc.setRemoteDescription(new RTCSessionDescription({type:"answer", sdp:sdp}));
+        this._uiRemoteSDP.value = sdp;
+    } catch (e) {
+        console.log("setRemoteDescriptionFail ", e);
+    }
+}
+
 </script>
 
 </body>
